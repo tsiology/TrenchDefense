@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿/*Not currently in use. Attach this to the camera to force smooth following of a target.*/
+
+using UnityEngine;
 
 namespace UnityStandardAssets.Utility
 {

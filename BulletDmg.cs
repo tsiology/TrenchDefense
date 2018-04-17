@@ -1,12 +1,25 @@
-﻿using System.Collections;
+﻿/*
+
+This class can be attached to either player or enemy bullets and then uses collisions
+to call approriate takeDamage scripts from the objects the bullet hits.
+
+Also provides prefab for destroyed barricade.
+
+tgodwin
+6/4/17
+
+*/
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class BulletDmg : MonoBehaviour {
 
-	public float bulletLife = 1.75f; //how many seconds the bullet remains in-game
-	public float bulletStart;
-	public GameObject hitAnime;
+	public float bulletLife = 2.0f; //how many seconds the bullet remains in-game
+	public float bulletStart;       //game time when bullet is created
+	public GameObject hitAnime;     
+	public GameObject deadBag;
 
 	// Use this for initialization
 	void Start () 
@@ -17,115 +30,101 @@ public class BulletDmg : MonoBehaviour {
 	// Update is called once per frame
 	void Update () 
 	{
-	//	GameObject HUD = GameObject.FindWithTag ("HUD");
-
-
 		if (Time.time - bulletStart > bulletLife) 
 		{
 			Destroy(gameObject);
 		}
-
-
 	}
 
 	void OnTriggerEnter (Collider other )
 	{
-		//if the bullet hits the enemy base
-		if (tag != "Enemy" && other.gameObject.tag == "EnemyBase") 
-		{
-			HUD.shotsHit++;
-			other.gameObject.GetComponent<EnemyBase> ().takeDamage (1);   //damage the base
-		}
+		//Debug.Log ("hit something");
 
 		//if the bullet is not an enemy bullet and hits an enemy 
-		else if (tag != "Enemy" && other.gameObject.tag == "Enemy") {
+		if (tag != "Enemy" && other.gameObject.tag == "Enemy") 
+		{
 			GameObject HUDobj = GameObject.FindWithTag ("HUD");
 			HUDobj.GetComponent<HUD> ().ScoreUpdate (10);
-			HUD.shotsHit++;
-			if (tag == "Charged") 
+	
+			if (tag == "Charged")
 			{
-				Debug.Log ("Player charged bullet dealing 2 dmg to enemy");
-				other.gameObject.GetComponent<MoveDrone> ().takeDamage (2);   //damage the drone
-				GameObject tmp = Instantiate (hitAnime, gameObject.transform.position, Quaternion.identity);
-				Destroy (tmp, 0.65f);
-			} 
-			else if(other.gameObject.GetComponent<MoveDrone> ()) 
+				if (other.gameObject.GetComponent<MoveDrone>())
+				{
+					other.gameObject.GetComponent<MoveDrone> ().takeDamage (5);   //damage the drone	
+				}
+				else if(other.gameObject.GetComponent<MoveScout>())
+				{
+					other.gameObject.GetComponent<MoveScout> ().takeDamage (5);   //damage the scout
+				}
+			} 		
+			else
 			{
-				Debug.Log ("Player bullet dealing 1 dmg to enemy");
-				other.gameObject.GetComponent<MoveDrone> ().takeDamage (1);   //damage the drone
-				
-				bulletHit ();
+				if (other.gameObject.GetComponent<MoveDrone>())
+				{				
+					other.gameObject.GetComponent<MoveDrone> ().takeDamage (1);   //damage the drone
+					bulletHit ();
+					HUD.shotsHit++;
+				}
+				else if(other.gameObject.GetComponent<MoveScout>())
+				{
+					other.gameObject.GetComponent<MoveScout> ().takeDamage (1);   //damage the scout
+					bulletHit ();
+					HUD.shotsHit++;
+				}
 			}
-			else if(other.gameObject.GetComponent<MoveScout> ()) 
-			{
-				Debug.Log ("Player bullet dealing 1 dmg to enemy");
-				other.gameObject.GetComponent<MoveScout> ().takeDamage (1);   //damage the drone
-				
-				bulletHit ();
-			}
-			else if(other.gameObject.GetComponent<MoveAce> ()) 
-			{
-				Debug.Log ("Player bullet dealing 1 dmg to enemy Ace");
-				other.gameObject.GetComponent<MoveAce> ().takeDamage (1);   //damage the drone
-				
-				bulletHit ();
-			}
-		}
-
-		//if the bullet is not an enemy bullet and hits a sandbag
-		else if (tag != "Enemy" && other.gameObject.tag == "Sandbag") {
-			Debug.Log ("Player bullet hit Sandbag");
-			Destroy (other.gameObject);
-			bulletHit ();
-		}
-
-		//if the enemy hits the player base
-		else if (tag == "Enemy" && other.gameObject.tag == "PlayerBase") 
-		{
-			other.gameObject.GetComponent<PlayerBase> ().takeDamage (1);   //damage the base
 		}
 
 		//if the bullet is an enemy bullet and hits the player
-		else if (tag == "Enemy" && other.gameObject.tag == "Player") {
-			Debug.Log ("Enemy bullet dealing 1 dmg to player");
+		else if (tag == "Enemy" && other.gameObject.tag == "Player") 
+		{
+			//Debug.Log ("Enemy bullet dealing dmg to player");
 			other.gameObject.GetComponent<MovePlayer> ().takeDamage (1);
 			bulletHit ();
 		}
 
-		//if the bullet is an enemy bullet and hits a sandbag
-		else if (tag == "Enemy" && other.gameObject.tag == "Sandbag") {
-			Debug.Log ("Enemy bullet hit Sandbag");
-			Destroy (other.gameObject);
+		else if (tag == "Enemy" && other.gameObject.tag == "Shield") 
+		{
+			GameObject player = GameObject.FindWithTag ("Player");
+			if (player)
+				player.GetComponent<MovePlayer> ().visualizeShield ();
+
 			bulletHit ();
 		}
 
-		else if (tag == "Enemy" && other.gameObject.tag == "Shield") {
-			Debug.Log ("Enemy bullet hit energy shield");
-			bulletHit ();
+		//if the bullet hits a sandbag
+		else if (other.gameObject.tag == "Sandbag") 
+		{
+			Destroy (other.gameObject);
+			GameObject bag1 = Instantiate (deadBag, gameObject.transform.position - (transform.up), Quaternion.Euler (0, 0, 90));
+			GameObject bag2 = Instantiate (deadBag, gameObject.transform.position - (transform.up*.75f), Quaternion.Euler (0, 0, 90));
+			GameObject bag3 = Instantiate (deadBag, gameObject.transform.position - (transform.up*.50f), Quaternion.Euler (0, 0, 90));
+			GameObject bag4 = Instantiate (deadBag, gameObject.transform.position - (transform.up*.25f), Quaternion.Euler (0, 0, 90));
+			Destroy (bag1, 3.5f);
+			Destroy (bag2, 3.5f);
+			Destroy (bag3, 3.5f);
+			Destroy (bag4, 3.5f);
+
+			if (tag != "Charged") 
+			{
+				bulletHit ();
+			}
 		}
 
 		//if the bullet hits terrain
-		else if (other.gameObject.tag == "Terrain")
+		else if (other.gameObject.tag == "Terrain" && tag != "Charged")
 		{
 			bulletHit ();
 		}
 
 	}
 
-	void OnCollisionEnter(Collision collision)
-	{
-		if (collision.gameObject.tag == "Enemy" && tag == "Enemy")
-		{
-			Physics.IgnoreCollision(collision.gameObject.GetComponent<Collider>(), GetComponent<Collider>());
-		}
-	}
-
-	//destroys the bullet and creats a hit animation
+	//create a temporary explosion animation and destroy the bullet
 	void bulletHit()
 	{
-		GameObject tmp = Instantiate (hitAnime, transform.position + Vector3.back, Quaternion.identity);
-		Destroy (tmp, 0.65f);
+		//GameObject tmp = Instantiate (hitAnime, gameObject.transform.position, Quaternion.identity);
+		//Destroy (tmp, 0.75f);
 		Destroy (gameObject);
 	}
+
 
 }
